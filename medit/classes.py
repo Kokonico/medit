@@ -2,7 +2,7 @@ from objlog import LogMessage
 
 class Line(LogMessage):
     # blank color
-    color = "\033[0m"
+    color = ""
     level = "Medit"
 
 class File:
