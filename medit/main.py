@@ -78,14 +78,20 @@ def edit(file: File):
                     # check if a second argument is given, if so, move up as many lines as specified (unless out of bounds, clamp it)
                     try:
                         amount = int(parts[1])
-                        cursor_position = max(0, cursor_position - amount)
+                        if amount == -1:
+                            cursor_position = 0
+                        else:
+                            cursor_position = max(0, cursor_position - amount)
                     except (IndexError, ValueError):
                         cursor_position -= 1
             case "d" | "down":
                 if cursor_position < len(file.content) - 1:
                     try:
                         amount = int(parts[1])
-                        cursor_position = min(len(file.content) - 1, cursor_position + amount)
+                        if amount == -1:
+                            cursor_position = len(file.content) - 1
+                        else:
+                            cursor_position = min(len(file.content) - 1, cursor_position + amount)
                     except (IndexError, ValueError):
                         cursor_position += 1
             case "a" | "add":
