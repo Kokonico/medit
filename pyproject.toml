@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "medit"
-version = "0.1.0"
+name = "MicroEdit"
+version = "1.0.0"
 description = "A non-interactive file editor"
 authors = ["Kokonico <kokonico@duck.com>"]
 scripts = { medit = "medit.main:main" }
