@@ -3,7 +3,7 @@ name = "MicroEdit"
 version = "1.0.0"
 description = "A non-interactive file editor"
 authors = ["Kokonico <kokonico@duck.com>"]
-scripts = { medit = "medit.main:main" }
+scripts = { medit = "microedit.main:main" }
 license = "Zlib"
 readme = "README.md"
 
