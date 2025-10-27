@@ -4,9 +4,7 @@ import os
 from objlog.LogMessages import Fatal, Info
 from objlog import LogNode
 
-LOG = LogNode("medit", print_filter=[Fatal, Info], print_to_console=True, log_file=LOG_DIR)
-
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 LOG_DIR: str
 
@@ -19,3 +17,5 @@ match sys.platform:
         LOG_DIR = os.path.join(os.getenv("APPDATA"), "medit", "medit.log")
     case _:
         LOG_DIR = os.path.join(os.path.expanduser("~"), "medit.log")
+
+LOG = LogNode("medit", print_filter=[Fatal, Info], print_to_console=True, log_file=LOG_DIR)

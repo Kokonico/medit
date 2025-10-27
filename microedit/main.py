@@ -5,7 +5,7 @@ import os
 from objlog.LogMessages import Debug, Info, Warn, Error
 
 from .classes import Line, File, EditCommandResult
-from .constants import LOG_DIR, LOG
+from .constants import LOG_DIR, LOG, VERSION
 
 # get os log directory for different os's
 
