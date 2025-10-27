@@ -1,3 +1,6 @@
 *.log
 .idea/
 dist/
+# Python cache
+__pycache__/
+*.pyc
