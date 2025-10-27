@@ -62,8 +62,20 @@ def edit(file: File):
                 print(f"\u001b[32m> {line}\u001b[0m")  # green color for current line
             else:
                 print(f"  {line}")
-        command = input("::> ").lower().strip()
-        result = run_commands(command, file, cursor_position)
+        #command = input("::> ").lower().strip() ### fix lower
+        user_input = input("::> ").strip()
+        if not user_input:
+            continue 
+
+        parts = user_input.split(maxsplit=1)
+        command = parts[0].lower()
+        if len(parts) > 1:
+            user_input = f"{command} {parts[1]}"
+        else:
+            user_input = command
+
+        result = run_commands(user_input, file, cursor_position) ### fix lower
+
         cursor_position = result.cursor_position
         file = result.file
         if result.quit_editor:
