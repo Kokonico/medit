@@ -6,6 +6,9 @@ from objlog import LogNode
 
 VERSION = "1.1.0"
 
+# note: for easier usage, use something that bash/zsh/fish won't interpret
+COMMAND_SEPARATOR_CHAR = ","
+
 LOG_DIR: str
 
 match sys.platform:

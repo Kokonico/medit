@@ -1,11 +1,12 @@
 """medit: a non-interactive text editor for terminal."""
 import argparse
 import os
+from math import remainder
 
 from objlog.LogMessages import Debug, Info, Warn, Error
 
 from .classes import Line, File, EditCommandResult
-from .constants import LOG_DIR, LOG, VERSION
+from .constants import LOG_DIR, LOG, VERSION, COMMAND_SEPARATOR_CHAR
 
 # get os log directory for different os's
 
@@ -76,7 +77,7 @@ def edit(file: File):
 
 def run_commands(commands: str, file: File, cursor_position: int = 0) -> EditCommandResult:
     """Run a series of commands on the file."""
-    for command in commands.split(':'):
+    for command in commands.split(COMMAND_SEPARATOR_CHAR):
         command = command.strip()
         # prune empty commands
         if len(command) == 0:
@@ -86,6 +87,7 @@ def run_commands(commands: str, file: File, cursor_position: int = 0) -> EditCom
 
         parts = command.split()
         LOG.log(Debug(f"Command parts: {parts}"))
+        LOG.log(Debug(f"Pre-execution cursor position: {cursor_position}"))
         match parts[0]:
             case "q" | "quit":
                 LOG.log(Info("Exiting editor."))
@@ -118,14 +120,20 @@ def run_commands(commands: str, file: File, cursor_position: int = 0) -> EditCom
                 else:
                     new_line = input("New line content: ")
                 file.content.insert(cursor_position + 1, Line(new_line))
-                cursor_position += 1
+                cursor_position += 1 if len(file.content) > 1 else 0  # if it's the first line, don't move cursor
+                # ex: there were 0 lines, we added one, cursor should stay at 0
             case "e" | "edit":
                 # same as add, check for args
                 if len(parts) > 1:
                     new_content = " ".join(parts[1:])
                 else:
                     new_content = input(f"E ({file.content[cursor_position].content}) / ")
-                file.content[cursor_position].content = new_content
+
+                # check if we need to expand the file content (if the file is empty)
+                if len(file.content) == 0:
+                    file.content.append(Line(new_content))
+                else:
+                    file.content[cursor_position].content = new_content
             case "r" | "remove":
                 if len(file.content) > 0:
                     file.content.pop(cursor_position)
@@ -153,16 +161,18 @@ def run_commands(commands: str, file: File, cursor_position: int = 0) -> EditCom
 
             case _:
                 LOG.log(Warn(f"Unknown command: {command}"))
+        LOG.log(Debug(f"Post-execution cursor position: {cursor_position}"))
     return EditCommandResult(quit_editor=False, cursor_position=cursor_position, file=file)
 
 def main():
     parser = argparse.ArgumentParser(description="medit: a non-interactive text editor for terminal.")
+    parser.add_argument("--version", action="version", version=f"medit {VERSION}")
     parser.add_argument("file", nargs='?', help="The file to edit.")
     # allow -c (command) to run a command and exit (optional)
-    # everything after -c is considered part of the command until the next :
+    # everything after -c is considered part of the command until the next COMMAND_SEPARATOR_CHAR
     # THIS INCLUDES SPACES
-    parser.add_argument("-c", "--command", help="Command(s) to run on the file, separated by ':'.")
-    parser.add_argument("--version", action="version", version=f"medit {VERSION}")
+    parser.add_argument("-c", "--command", help=f"Command(s) to run on the file, separated by '{COMMAND_SEPARATOR_CHAR}'. NOTE: all arguments after -c are considered part of the command.", nargs=argparse.REMAINDER)
+    # get remaining arguments
     args = parser.parse_args()
 
     # If no file argument is provided, create an in-memory empty File and edit it.
@@ -170,11 +180,16 @@ def main():
     LOG.log(Debug(f"Arguments: {args}"))
 
     if args.command:
+
+        command_str = " ".join(args.command).strip()
+
+        LOG.log(Debug(f"Command string: {command_str}"))
+
         if args.file is None:
             file = File(None, [])
         else:
             file = get_or_create_file(args.file)
-        result = run_commands(args.command, file)
+        result = run_commands(command_str, file)
         result.file.refresh_lines()
         if result.quit_editor:
             LOG.log(Info("Exiting editor after command execution."))
