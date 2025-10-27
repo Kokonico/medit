@@ -1,53 +1,48 @@
 """medit: a non-interactive text editor for terminal."""
-import sys
-import os
 import argparse
+import os
 
-from objlog import LogNode, LogMessage
-from objlog.LogMessages import Debug, Info, Warn, Error, Fatal
+from objlog.LogMessages import Debug, Info, Warn, Error
 
-from .classes import Line, File
+from .classes import Line, File, EditCommandResult
+from .constants import LOG_DIR, LOG
 
 # get os log directory for different os's
-
-match sys.platform:
-    case "linux" | "linux2":
-        LOG_DIR = os.path.join(os.path.expanduser("~"), ".local", "share", "medit", "medit.log")
-    case "darwin":
-        LOG_DIR = os.path.join(os.path.expanduser("~"), "Library", "Logs", "medit", "medit.log")
-    case "win32":
-        LOG_DIR = os.path.join(os.getenv("APPDATA"), "medit", "medit.log")
-    case _:
-        LOG_DIR = os.path.join(os.path.expanduser("~"), "medit.log")
 
 # Ensure the log directory exists
 # this variable will exist, ignore warning
 os.makedirs(os.path.dirname(LOG_DIR), exist_ok=True)
 
-LOG = LogNode("medit", print_filter=[Fatal, Info], print_to_console=True, log_file=LOG_DIR)
-
-VERSION = "1.0.0"
-
-def begin_editing(file_path):
-    """Begin editing the specified file."""
+def get_file(file_path: str) -> File:
+    """Get a File object from the specified file path."""
     if not os.path.exists(file_path):
-        LOG.log(Debug(f"File {file_path} does not exist. Creating a new file."))
-        with open(file_path, 'w') as f:
-            pass  # Create an empty file
-    else:
-        LOG.log(Info(f"Opening file {file_path} for editing."))
-    # Here would be the logic to open the file in a text editor mode
-    LOG.log(Info(f"Editing file: {file_path}"))
-    # now, print each line with the Line.colored() method
-    with open(file_path, 'r+') as f:
+        LOG.log(Error(f"File {file_path} does not exist."))
+        raise FileNotFoundError(f"File {file_path} does not exist.")
+
+    with open(file_path, 'r') as f:
         content = f.read()
-        # create the File object
         lines = [Line(line) for line in content.splitlines()]
         # set level for each line to be the line number
         for i, line in enumerate(lines):
             line.level = f"{i+1}"
-        file = File(file_path, lines)
-        # we got the data, now edit it
+        return File(file_path, lines)
+
+def get_or_create_file(file_path: str) -> File:
+    """Get a File object from the specified file path, or create a new one if it doesn't exist."""
+    if not os.path.exists(file_path):
+        LOG.log(Debug(f"File {file_path} does not exist. Creating a new file."))
+        with open(file_path, 'w') as f:
+            pass  # Create an empty file
+        return File(file_path, [])
+    else:
+        return get_file(file_path)
+
+def begin_editing(file_path):
+    """Begin editing the specified file."""
+    LOG.log(Info(f"Opening file {file_path} for editing."))
+    # Here would be the logic to open the file in a text editor mode
+    LOG.log(Info(f"Editing file: {file_path}"))
+    file = get_or_create_file(file_path)
     edit(file)
 
 def edit(file: File):
@@ -67,14 +62,34 @@ def edit(file: File):
             else:
                 print(f"  {line}")
         command = input("::> ").lower().strip()
+        result = run_commands(command, file, cursor_position)
+        cursor_position = result.cursor_position
+        file = result.file
+        if result.quit_editor:
+            break
+    # check for unsaved changes before exiting
+    if file.unsaved_changes():
+        save = input("You have unsaved changes. Save before exiting? (y/n): ").lower().strip()
+        if save == 'y':
+            file.save()
+            LOG.log(Info(f"File {file.path} saved."))
+
+def run_commands(commands: str, file: File, cursor_position: int = 0) -> EditCommandResult:
+    """Run a series of commands on the file."""
+    for command in commands.split(':'):
+        command = command.strip()
+        # prune empty commands
+        if len(command) == 0:
+            continue
+
+        LOG.log(Debug(f"Running command: {command}"))
 
         parts = command.split()
         LOG.log(Debug(f"Command parts: {parts}"))
-
         match parts[0]:
             case "q" | "quit":
                 LOG.log(Info("Exiting editor."))
-                break
+                return EditCommandResult(quit_editor=True, cursor_position=cursor_position, file=file)
             case "u" | "up":
                 if cursor_position > 0:
                     # check if a second argument is given, if so, move up as many lines as specified (unless out of bounds, clamp it)
@@ -138,21 +153,37 @@ def edit(file: File):
 
             case _:
                 LOG.log(Warn(f"Unknown command: {command}"))
-    # check for unsaved changes before exiting
-    if file.unsaved_changes():
-        save = input("You have unsaved changes. Save before exiting? (y/n): ").lower().strip()
-        if save == 'y':
-            file.save()
-            LOG.log(Info(f"File {file.path} saved."))
+    return EditCommandResult(quit_editor=False, cursor_position=cursor_position, file=file)
 
 def main():
     parser = argparse.ArgumentParser(description="medit: a non-interactive text editor for terminal.")
     parser.add_argument("file", nargs='?', help="The file to edit.")
+    # allow -c (command) to run a command and exit (optional)
+    # everything after -c is considered part of the command until the next :
+    # THIS INCLUDES SPACES
+    parser.add_argument("-c", "--command", help="Command(s) to run on the file, separated by ':'.")
     parser.add_argument("--version", action="version", version=f"medit {VERSION}")
     args = parser.parse_args()
 
     # If no file argument is provided, create an in-memory empty File and edit it.
-    if args.file is None:
+
+    LOG.log(Debug(f"Arguments: {args}"))
+
+    if args.command:
+        if args.file is None:
+            file = File(None, [])
+        else:
+            file = get_or_create_file(args.file)
+        result = run_commands(args.command, file)
+        result.file.refresh_lines()
+        if result.quit_editor:
+            LOG.log(Info("Exiting editor after command execution."))
+        else:
+            LOG.log(Info("Command(s) executed. Current file content:"))
+            for line in result.file.content:
+                print(line)
+        result.file.save()
+    elif args.file is None:
         file = File(None, [])
         edit(file)
     else:
