@@ -56,14 +56,16 @@ def edit(file: File):
     # then the line with the cursor should have the content on that line
     # be easily editable (input only lets you add new content)
     cursor_position = len(file.content) - 1 # start at the end of the file
+    # calculate context lines to show based on terminal size
+    context_size = max(5, (os.get_terminal_size().lines - 3) // 2)
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
         file.refresh_lines()
-        for i, line in enumerate(file.content):
-            if i == cursor_position:
-                print(f"> {line.colored()}")
+        for line in file.show_lines_near(cursor_position, context=context_size):
+            if int(line.level) - 1 == cursor_position:
+                print(f"\u001b[32m> {line}\u001b[0m")  # green color for current line
             else:
-                print(f"  {line.colored()}")
+                print(f"  {line}")
         command = input("::> ").lower().strip()
 
         parts = command.split()
@@ -107,8 +109,8 @@ def edit(file: File):
                 if len(parts) > 1:
                     new_content = " ".join(parts[1:])
                 else:
-                    new_content = input(f"E ({file.content[cursor_position].message}) / ")
-                file.content[cursor_position].message = new_content
+                    new_content = input(f"E ({file.content[cursor_position].content}) / ")
+                file.content[cursor_position].content = new_content
             case "r" | "remove":
                 if len(file.content) > 0:
                     file.content.pop(cursor_position)
@@ -143,11 +145,15 @@ def edit(file: File):
             file.save()
             LOG.log(Info(f"File {file.path} saved."))
 
-
 def main():
     parser = argparse.ArgumentParser(description="medit: a non-interactive text editor for terminal.")
-    parser.add_argument("file", help="The file to edit.")
+    parser.add_argument("file", nargs='?', help="The file to edit.")
     parser.add_argument("--version", action="version", version=f"medit {VERSION}")
     args = parser.parse_args()
-    
-    begin_editing(args.file)
+
+    # If no file argument is provided, create an in-memory empty File and edit it.
+    if args.file is None:
+        file = File(None, [])
+        edit(file)
+    else:
+        begin_editing(args.file)
