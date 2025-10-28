@@ -5,7 +5,7 @@ import os
 from objlog.LogMessages import Fatal, Info
 from objlog import LogNode
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 COMMAND_SEPARATOR_CHAR = ","
 
