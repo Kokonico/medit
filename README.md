@@ -1,4 +1,5 @@
 # Medit
+<sub>psst... check out <a href="https://github.com/Robertflexx/tedit">tedit by Robertflexx</a></sub>
 > Micro Edit
 
 A hyper minimal text editor for your terminal built with Python
