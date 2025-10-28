@@ -7,7 +7,7 @@ class EditCommandResult:
     """Represents the result of an edit command."""
 
     def __init__(
-        self, quit_editor: bool = False, cursor_position: int = 0, file: File = None
+        self, quit_editor: bool = False, cursor_position: int = 0, file: "File" = None
     ):
         self.quit_editor = quit_editor
         self.cursor_position = cursor_position
