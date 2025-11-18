@@ -46,7 +46,9 @@ def begin_editing(file_path):
 
 def edit(file: File):
     """Edit the file in a non-interactive way."""
-    cursor_position = max(0, len(file.content) - 1)  # start at the end of the file, or 0 if empty
+    cursor_position = max(
+        0, len(file.content) - 1
+    )  # start at the end of the file, or 0 if empty
     # calculate context lines to show based on terminal size
     context_size = max(5, (os.get_terminal_size().lines - 3) // 2)
     while True:
@@ -149,11 +151,13 @@ def run_commands(
                     new_content = " ".join(parts[1:])
                 else:
                     # Check if file has content before accessing cursor position
-                    current_text = file.content[cursor_position].content if len(file.content) > 0 and cursor_position < len(file.content) else ""
-                    new_content = input(
-                        f"E ({current_text}) / "
+                    current_text = (
+                        file.content[cursor_position].content
+                        if len(file.content) > 0 and cursor_position < len(file.content)
+                        else ""
                     )
-                
+                    new_content = input(f"E ({current_text}) / ")
+
                 if len(file.content) == 0:
                     file.content.append(Line(new_content))
                     cursor_position = 0  # Set cursor to first line
