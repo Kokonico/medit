@@ -112,6 +112,17 @@ def run_commands(
                             cursor_position = max(0, cursor_position - amount)
                     except (IndexError, ValueError):
                         cursor_position -= 1
+
+            case "g" | "goto":
+                try:
+                    line_number = int(parts[1]) - 1  # convert to 0-indexed
+                    if 0 <= line_number < len(file.content):
+                        cursor_position = line_number
+                    else:
+                        LOG.log(Warn(f"Line number {line_number + 1} is out of range."))
+                except (IndexError, ValueError):
+                    LOG.log(Warn("Invalid line number for goto command."))
+
             case "d" | "down":
                 if cursor_position < len(file.content) - 1:
                     try:
@@ -164,6 +175,7 @@ def run_commands(
                 print("Commands:")
                 print("  q, quit       - Exit the editor")
                 print("  u, up         - Move cursor up")
+                print(" g, goto       - Go to a specific line number")
                 print("  d, down       - Move cursor down")
                 print("  a, add        - Add a new line after the cursor")
                 print("  e, edit       - Edit the current line")
