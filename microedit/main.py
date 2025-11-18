@@ -163,6 +163,27 @@ def run_commands(
                     cursor_position = 0  # Set cursor to first line
                 else:
                     file.content[cursor_position].content = new_content
+            case "i" | "insert":
+                if len(parts) > 1:
+                    insert_text = " ".join(parts[1:])
+                else:
+                    current_text = (
+                        file.content[cursor_position].content
+                        if len(file.content) > 0 and cursor_position < len(file.content)
+                        else ""
+                    )
+                    insert_text = input(f"I ({current_text}) / ")
+
+                if len(file.content) == 0:
+                    file.content.append(Line(insert_text))
+                    cursor_position = 0
+                else:
+                    if file.content[cursor_position].content == "":
+                        file.content[cursor_position].content = insert_text
+                    else:
+                        file.content[cursor_position].content = (
+                            file.content[cursor_position].content + " " + insert_text
+                        )
             case "r" | "remove":
                 if len(file.content) > 0:
                     file.content.pop(cursor_position)
@@ -183,6 +204,7 @@ def run_commands(
                 print("  d, down       - Move cursor down")
                 print("  a, add        - Add a new line after the cursor")
                 print("  e, edit       - Edit the current line")
+                print("  i, insert     - Insert text onto the current line (append, doesn't replace)")
                 print("  r, remove   - Delete the current line")
                 print("  s, save       - Save the file")
                 print(
