@@ -175,7 +175,7 @@ def run_commands(
                 print("Commands:")
                 print("  q, quit       - Exit the editor")
                 print("  u, up         - Move cursor up")
-                print(" g, goto       - Go to a specific line number")
+                print("  g, goto       - Go to a specific line number")
                 print("  d, down       - Move cursor down")
                 print("  a, add        - Add a new line after the cursor")
                 print("  e, edit       - Edit the current line")
