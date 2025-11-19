@@ -26,6 +26,7 @@ medit <filename>
 - `a | add [TEXT]`: adds a newline with TEXT below the current line (optional)
 - `r | remove`: removes the current line
 - `e | edit [TEXT]`: replaces the current line with TEXT (optional)
+- `i | insert [TEXT]`: inserts TEXT after the current line's content (optional)
 
 ## Contributing
 Contributions are welcome! Please feel free to submit a pull request or open an issue.
