@@ -164,14 +164,16 @@ def run_commands(
                 else:
                     file.content[cursor_position].content = new_content
             case "i" | "insert":
+
+                current_text = (
+                    file.content[cursor_position].content
+                    if len(file.content) > 0 and cursor_position < len(file.content)
+                    else ""
+                )
+
                 if len(parts) > 1:
                     insert_text = " ".join(parts[1:])
                 else:
-                    current_text = (
-                        file.content[cursor_position].content
-                        if len(file.content) > 0 and cursor_position < len(file.content)
-                        else ""
-                    )
                     insert_text = input(f"I ({current_text}) / ")
 
                 if len(file.content) == 0:
