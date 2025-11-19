@@ -7,11 +7,16 @@ class EditCommandResult:
     """Represents the result of an edit command."""
 
     def __init__(
-        self, quit_editor: bool = False, cursor_position: int = 0, file: "File" = None
+        self,
+        quit_editor: bool = False,
+        cursor_position: int = 0,
+        file: "File" = None,
+        feedback: LogMessage = None,
     ):
         self.quit_editor = quit_editor
         self.cursor_position = cursor_position
         self.file = file
+        self.feedback = feedback
 
 
 class Line:
@@ -85,3 +90,6 @@ class File:
 
         in_memory_content = [line.content for line in self.content]
         return disk_content != in_memory_content
+
+    def __len__(self):
+        return len(self.content)

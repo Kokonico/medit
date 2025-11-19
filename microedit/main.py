@@ -2,12 +2,13 @@
 
 import argparse
 import os
-from math import remainder
 
 from objlog.LogMessages import Debug, Info, Warn, Error
 
 from .classes import Line, File, EditCommandResult
 from .constants import LOG_DIR, LOG, VERSION, COMMAND_SEPARATOR_CHAR
+
+from .commands import execute_command
 
 
 def get_file(file_path: str) -> File:
@@ -51,9 +52,11 @@ def edit(file: File):
     )  # start at the end of the file, or 0 if empty
     # calculate context lines to show based on terminal size
     context_size = max(5, (os.get_terminal_size().lines - 3) // 2)
+    status = Info("Entered edit mode. Type 'h' or 'help' for commands.")
     while True:
         os.system("cls" if os.name == "nt" else "clear")
         file.refresh_lines()
+        print(status.color + status.message + "\u001b[0m")
         for line in file.show_lines_near(cursor_position, context=context_size):
             if int(line.level) - 1 == cursor_position:
                 print(f"\u001b[32m> {line}\u001b[0m")  # green color for current line
@@ -63,8 +66,10 @@ def edit(file: File):
         command = input("::> ").strip()
 
         result = run_commands(command, file, cursor_position)
+        status = result.feedback if result.feedback else status
         cursor_position = result.cursor_position
         file = result.file
+
         if result.quit_editor:
             break
     # check for unsaved changes before exiting
@@ -83,6 +88,9 @@ def run_commands(
     commands: str, file: File, cursor_position: int = 0
 ) -> EditCommandResult:
     """Run a series of commands on the file."""
+
+    last_feedback = None
+
     for command in commands.split(COMMAND_SEPARATOR_CHAR):
         command = command.strip()
         # prune empty commands
@@ -98,123 +106,27 @@ def run_commands(
         if len(parts) <= 0:
             continue
 
-        match parts[0].lower():
-            case "q" | "quit":
-                LOG.log(Info("Exiting editor."))
-                return EditCommandResult(
-                    quit_editor=True, cursor_position=cursor_position, file=file
-                )
-            case "u" | "up":
-                if cursor_position > 0:
-                    try:
-                        amount = int(parts[1])
-                        if amount == -1:
-                            cursor_position = 0
-                        else:
-                            cursor_position = max(0, cursor_position - amount)
-                    except (IndexError, ValueError):
-                        cursor_position -= 1
+        result = execute_command(parts[0], file, cursor_position, *parts[1:])
+        file = result.file
+        cursor_position = result.cursor_position
+        if result.feedback:
+            LOG.log(result.feedback)
+            last_feedback = result.feedback
+        if result.quit_editor:
+            LOG.log(Info("Quit command received. Exiting editor."))
+            return EditCommandResult(
+                quit_editor=True,
+                cursor_position=cursor_position,
+                file=file,
+                feedback=result.feedback,
+            )
 
-            case "g" | "goto":
-                try:
-                    line_number = int(parts[1]) - 1  # convert to 0-indexed
-                    if 0 <= line_number < len(file.content):
-                        cursor_position = line_number
-                    else:
-                        LOG.log(Warn(f"Line number {line_number + 1} is out of range."))
-                except (IndexError, ValueError):
-                    LOG.log(Warn("Invalid line number for goto command."))
-
-            case "d" | "down":
-                if cursor_position < len(file.content) - 1:
-                    try:
-                        amount = int(parts[1])
-                        if amount == -1:
-                            cursor_position = len(file.content) - 1
-                        else:
-                            cursor_position = min(
-                                len(file.content) - 1, cursor_position + amount
-                            )
-                    except (IndexError, ValueError):
-                        cursor_position += 1
-            case "a" | "add":
-                if len(parts) > 1:
-                    new_line = " ".join(parts[1:])
-                else:
-                    new_line = input("New line content: ")
-                file.content.insert(cursor_position + 1, Line(new_line))
-                cursor_position += (
-                    1 if len(file.content) > 1 else 0
-                )  # if it's the first line, don't move cursor
-            case "e" | "edit":
-                if len(parts) > 1:
-                    new_content = " ".join(parts[1:])
-                else:
-                    # Check if file has content before accessing cursor position
-                    current_text = (
-                        file.content[cursor_position].content
-                        if len(file.content) > 0 and cursor_position < len(file.content)
-                        else ""
-                    )
-                    new_content = input(f"E ({current_text}) / ")
-
-                if len(file.content) == 0:
-                    file.content.append(Line(new_content))
-                    cursor_position = 0  # Set cursor to first line
-                else:
-                    file.content[cursor_position].content = new_content
-            case "i" | "insert":
-
-                current_text = (
-                    file.content[cursor_position].content
-                    if len(file.content) > 0 and cursor_position < len(file.content)
-                    else ""
-                )
-
-                if len(parts) > 1:
-                    insert_text = " ".join(parts[1:])
-                else:
-                    insert_text = input(f"I ({current_text}) / ")
-
-                if len(file.content) == 0:
-                    file.content.append(Line(insert_text))
-                    cursor_position = 0
-                else:
-                    file.content[cursor_position].content = ("" if current_text == "" else current_text + " ") + insert_text
-            case "r" | "remove":
-                if len(file.content) > 0:
-                    file.content.pop(cursor_position)
-                    if cursor_position >= len(file.content):
-                        cursor_position = len(file.content) - 1
-            case "s" | "save":
-                file.save()
-                LOG.log(Info(f"File {file.path} saved."))
-            case "n" | "newline":
-                file.content.insert(cursor_position + 1, Line(""))
-                cursor_position += 1
-
-            case "h" | "help":
-                print("Commands:")
-                print("  q, quit       - Exit the editor")
-                print("  u, up         - Move cursor up")
-                print("  g, goto       - Go to a specific line number")
-                print("  d, down       - Move cursor down")
-                print("  a, add        - Add a new line after the cursor")
-                print("  e, edit       - Edit the current line")
-                print("  i, insert     - Insert text onto the current line (append, doesn't replace)")
-                print("  r, remove   - Delete the current line")
-                print("  s, save       - Save the file")
-                print(
-                    "  n, newline     - Add a new line after the cursor (same as add, but without prompt)"
-                )
-                print("  h, help       - Show this help message")
-                input("Press Enter to continue...")
-
-            case _:
-                LOG.log(Warn(f"Unknown command: {command}"))
         LOG.log(Debug(f"Post-execution cursor position: {cursor_position}"))
     return EditCommandResult(
-        quit_editor=False, cursor_position=cursor_position, file=file
+        quit_editor=False,
+        cursor_position=cursor_position,
+        file=file,
+        feedback=last_feedback,
     )
 
 
