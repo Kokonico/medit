@@ -178,12 +178,7 @@ def run_commands(
                     file.content.append(Line(insert_text))
                     cursor_position = 0
                 else:
-                    if file.content[cursor_position].content == "":
-                        file.content[cursor_position].content = insert_text
-                    else:
-                        file.content[cursor_position].content = (
-                            file.content[cursor_position].content + " " + insert_text
-                        )
+                    file.content[cursor_position].content = ("" if current_text == "" else current_text + " ") + insert_text
             case "r" | "remove":
                 if len(file.content) > 0:
                     file.content.pop(cursor_position)
