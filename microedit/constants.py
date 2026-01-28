@@ -5,9 +5,12 @@ import os
 from objlog.LogMessages import Fatal, Info
 from objlog import LogNode
 
+from .config import get_config_result
+
 VERSION = "1.1.1"
 
-COMMAND_SEPARATOR_CHAR = ","
+CONFIG_RESULT = get_config_result()
+COMMAND_SEPARATOR_CHAR = CONFIG_RESULT.config.commands.separator
 
 LOG_DIR: str
 

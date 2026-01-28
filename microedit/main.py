@@ -6,7 +6,7 @@ import os
 from objlog.LogMessages import Debug, Info, Warn, Error
 
 from .classes import Line, File, EditCommandResult
-from .constants import LOG_DIR, LOG, VERSION, COMMAND_SEPARATOR_CHAR
+from .constants import LOG_DIR, LOG, VERSION, COMMAND_SEPARATOR_CHAR, CONFIG_RESULT
 
 from .commands import execute_command
 
@@ -145,6 +145,16 @@ def main():
     args = parser.parse_args()
 
     LOG.log(Debug(f"Arguments: {args}"))
+
+    if CONFIG_RESULT.diagnostics.error:
+        LOG.log(
+            Warn(
+                f"Config error ({CONFIG_RESULT.diagnostics.path}): "
+                f"{CONFIG_RESULT.diagnostics.error}. Using defaults."
+            )
+        )
+    for warning in CONFIG_RESULT.diagnostics.warnings:
+        LOG.log(Warn(f"Config warning ({CONFIG_RESULT.diagnostics.path}): {warning}"))
 
     if args.command:
         command_str = " ".join(args.command).strip()
